@@ -202,12 +202,12 @@ def get_activity_records_in_timeframe(tenant_access_token, app_token, activity_n
 
         record_date_str = fields.get("填写日期", "")
         
-        st.write(record_date_str)
+        # st.write(record_date_str)
         if not record_date_str:
             continue
             
         record_date = parse_date(str(record_date_str))
-        st.write(record_date)
+        # st.write(record_date)
 
         if record_date and start_date <= record_date <= end_date:
             # 提取参与者信息
@@ -403,4 +403,5 @@ st.sidebar.warning("""
 # 添加重置按钮
 if st.sidebar.button("重置查询"):
     st.session_state.activity_records = None
+
     st.experimental_rerun()
