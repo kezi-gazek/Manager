@@ -70,7 +70,8 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋万里行纪念品制作":"tblOPr3RxhG5DTJ0",
     "2025秋项目组修史":"tblxdgjpH3clJXnj",
     "2025万里行学校征集":"tblacJmKsE51nXQK",
-    "2025万里行学校考察":"tblq44HLbcAMZV2w"
+    "2025万里行学校考察":"tblq44HLbcAMZV2w",
+    '9月20日同心圆游园会':'tblKZ7dWs35qQAdk'
 }
 
 def get_tenant_access_token(app_id, app_secret):
@@ -405,3 +406,4 @@ if st.sidebar.button("重置查询"):
     st.session_state.activity_records = None
 
     st.experimental_rerun()
+
