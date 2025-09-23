@@ -167,6 +167,9 @@ def extract_text_from_field(value):
                 texts.append(item['text'])
             elif isinstance(item, str):
                 texts.append(item)
+            else:
+                # 处理其他类型，转换为字符串
+                texts.append(str(item))
         return ", ".join(texts)
     
     # 如果是字典，尝试提取text字段
@@ -181,18 +184,18 @@ def parse_date(date_str):
     if not date_str:
         return None
 
-    # 转换为秒级时间戳（除以1000）
-    timestamp_seconds = int(date_str) / 1000
-
-    # 转换为datetime对象（默认使用本地时区）
-    dt_object = datetime.fromtimestamp(timestamp_seconds)
-
-    # 格式化为 "XXXX/XX/XX" 格式
-    formatted_date = dt_object.strftime("%Y/%m/%d")
-    date_obj = datetime.strptime(formatted_date, "%Y/%m/%d")
     try:
+        # 转换为秒级时间戳（除以1000）
+        timestamp_seconds = int(date_str) / 1000
+
+        # 转换为datetime对象（默认使用本地时区）
+        dt_object = datetime.fromtimestamp(timestamp_seconds)
+
+        # 格式化为 "XXXX/XX/XX" 格式
+        formatted_date = dt_object.strftime("%Y/%m/%d")
+        date_obj = datetime.strptime(formatted_date, "%Y/%m/%d")
         return date_obj
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
 def get_activity_records_in_timeframe(tenant_access_token, app_token, activity_name, table_id, start_date, end_date):
@@ -207,19 +210,19 @@ def get_activity_records_in_timeframe(tenant_access_token, app_token, activity_n
 
         record_date_str = fields.get("填写日期", "")
         
-        # st.write(record_date_str)
         if not record_date_str:
             continue
             
         record_date = parse_date(str(record_date_str))
-        # st.write(record_date)
 
         if record_date and start_date <= record_date <= end_date:
             # 提取参与者信息
             name_data = fields.get("姓名", [{}])
             name = name_data[0].get("text", "") if name_data and isinstance(name_data, list) else ""
             
-            student_id = fields.get("学号", "")
+            # 处理学号字段，确保是字符串类型
+            student_id_raw = fields.get("学号", "")
+            student_id = extract_text_from_field(student_id_raw)
             
             # 提取反馈内容
             problem = extract_text_from_field(fields.get("遇到的问题", ""))
@@ -256,22 +259,45 @@ def calculate_volunteer_hours_summary(df):
     if df.empty or '姓名' not in df.columns or '学号' not in df.columns:
         return pd.DataFrame()
     
+    # 确保姓名和学号字段是字符串类型
+    df['姓名'] = df['姓名'].astype(str)
+    df['学号'] = df['学号'].astype(str)
+    
     # 处理学时字段 - 转换为数值类型，无法转换的设为0
     df['学时数值'] = pd.to_numeric(df['志愿学时'], errors='coerce').fillna(0)
     
-    # 按姓名和学号分组，汇总学时和活动
-    volunteer_summary = df.groupby(['姓名', '学号']).agg({
+    # 创建一个唯一的志愿者标识符（姓名+学号）
+    df['志愿者标识'] = df['姓名'] + ' (' + df['学号'] + ')'
+    
+    # 按志愿者标识分组，汇总学时和活动
+    volunteer_summary = df.groupby('志愿者标识').agg({
         '学时数值': 'sum',
-        '活动名称': lambda x: ', '.join(sorted(set(x)))  # 去重并排序活动名称
+        '活动名称': lambda x: ', '.join(sorted(set(x))),  # 去重并排序活动名称
+        '姓名': 'first',  # 获取第一个姓名
+        '学号': 'first'   # 获取第一个学号
     }).reset_index()
     
     # 重命名列
-    volunteer_summary.columns = ['姓名', '学号', '总学时', '参加的活动']
+    volunteer_summary.columns = ['志愿者标识', '总学时', '参加的活动', '姓名', '学号']
     
     # 按总学时降序排序
     volunteer_summary = volunteer_summary.sort_values('总学时', ascending=False)
     
+    # 选择需要的列
+    volunteer_summary = volunteer_summary[['姓名', '学号', '总学时', '参加的活动']]
+    
     return volunteer_summary
+
+def clean_dataframe_for_display(df):
+    """清理DataFrame以便在Streamlit中显示"""
+    # 复制DataFrame避免修改原始数据
+    df_clean = df.copy()
+    
+    # 将所有列转换为字符串类型，避免Arrow序列化问题
+    for col in df_clean.columns:
+        df_clean[col] = df_clean[col].astype(str)
+    
+    return df_clean
 
 # Streamlit界面
 st.set_page_config(page_title="社团活动记录查询系统（组织者版）", layout="wide")
@@ -363,8 +389,11 @@ if st.session_state.activity_records is not None:
         # 转换为DataFrame以便显示和导出
         df = pd.DataFrame(st.session_state.activity_records)
         
+        # 清理数据以便显示
+        df_display = clean_dataframe_for_display(df)
+        
         # 显示数据
-        st.dataframe(df)
+        st.dataframe(df_display)
         
         # 统计信息
         st.subheader("统计信息")
@@ -374,23 +403,35 @@ if st.session_state.activity_records is not None:
         with col2:
             st.metric("活动数量", df["活动名称"].nunique())
         with col3:
-            st.metric("参与人数", df["姓名"].nunique())
+            # 计算参与人数（基于姓名和学号的组合）
+            if not df.empty:
+                unique_volunteers = df[['姓名', '学号']].drop_duplicates()
+                st.metric("参与人数", len(unique_volunteers))
+            else:
+                st.metric("参与人数", 0)
         
         # 按活动分组的统计
         st.subheader("按活动分组统计")
+        # 使用原始数据进行统计计算
         activity_stats = df.groupby("活动名称").agg({
             "姓名": "count",
             "志愿学时": lambda x: sum(pd.to_numeric(x, errors='coerce').fillna(0))
         }).rename(columns={"姓名": "参与人次", "志愿学时": "总学时"})
-        st.dataframe(activity_stats)
+        
+        # 清理显示数据
+        activity_stats_display = clean_dataframe_for_display(activity_stats.reset_index())
+        st.dataframe(activity_stats_display)
         
         # 新增：志愿者学时汇总
         st.subheader("志愿者学时汇总")
         volunteer_summary = calculate_volunteer_hours_summary(df)
         
         if not volunteer_summary.empty:
+            # 清理显示数据
+            volunteer_summary_display = clean_dataframe_for_display(volunteer_summary)
+            
             # 显示汇总表格
-            st.dataframe(volunteer_summary)
+            st.dataframe(volunteer_summary_display)
             
             # 显示统计信息
             col1, col2, col3 = st.columns(3)
@@ -399,9 +440,12 @@ if st.session_state.activity_records is not None:
             with col2:
                 st.metric("总学时数", int(volunteer_summary['总学时'].sum()))
             with col3:
-                max_hours = volunteer_summary['总学时'].max()
-                top_volunteer = volunteer_summary[volunteer_summary['总学时'] == max_hours]['姓名'].iloc[0]
-                st.metric("最高学时", f"{int(max_hours)} ({top_volunteer})")
+                if not volunteer_summary.empty:
+                    max_hours = volunteer_summary['总学时'].max()
+                    top_volunteer = volunteer_summary[volunteer_summary['总学时'] == max_hours]['姓名'].iloc[0]
+                    st.metric("最高学时", f"{int(max_hours)} ({top_volunteer})")
+                else:
+                    st.metric("最高学时", 0)
             
             # 导出功能
             st.subheader("导出数据")
