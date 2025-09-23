@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
+import numpy as np
 
 # 需要排除的非活动字段
 EXCLUDED_FIELDS = [
@@ -33,6 +34,7 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋友伴我行线下活动":"tblhZAbDiqnOhZ2f",
     "2025秋王搏计划影展":"tbli1bx3nSLbW1uX",
     "2025秋河北计划讲座":"tblu55MQza5nG4s9",
+    '9月20日同心圆游园会':'tblKZ7dWs35qQAdk',
     "2025蒲公英支教":"tblSAg9XFeDDCemv",
     "2025儿童之家":"tbleo0cd0JCWqjao",
     "2025同心活动":"tblaiSue8q3UL0Xk",
@@ -46,6 +48,8 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋护老周":"tblumfhfNHjaQQRq",
     "2025秋人生回忆录":"tblPrN3wxvRyOEzC",
     "2025秋视频拍摄&剪辑培训":"tblI4hJryPqBZcHZ",
+    '2025秋平面设计培训':'tblTeEU3KlWBS0ru',
+    '9月21日宣传部第一次例会':'tblHUK4BwIbDQjS8',
     "9.13守望星空影展":"tblj972yK3WmBLC3",
     "2025秋金盲杖":"tblB74WxX7708aKd",
     "2025秋温馨家园":"tblHyvs5bWUwKgEd",
@@ -56,6 +60,7 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋守望星空":"tblQrJ0NajzSvd2O",
     "2025秋无障碍素拓":"tblRTFLHDADtOlax",
     "2025秋罕见病群体交流":"tblwOmSFeQNiNkXn",
+    '9月20日无障碍部迎新会':'tbl7cSMfL5JoTcDa',
     "9.20北京天文馆无障碍交流活动":"tbl1ifyIewQaqtRt",
     "9.12-9.14福祉博览会展览":"tblcIDBLNKMQ2U47",
     "2025秋百团快闪":"tblsVkYmBLyQcGFT",
@@ -70,8 +75,7 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋万里行纪念品制作":"tblOPr3RxhG5DTJ0",
     "2025秋项目组修史":"tblxdgjpH3clJXnj",
     "2025万里行学校征集":"tblacJmKsE51nXQK",
-    "2025万里行学校考察":"tblq44HLbcAMZV2w",
-    '9月20日同心圆游园会':'tblKZ7dWs35qQAdk'
+    "2025万里行学校考察":"tblq44HLbcAMZV2w"
 }
 
 def get_tenant_access_token(app_id, app_secret):
@@ -246,6 +250,29 @@ def get_activity_records_in_timeframe(tenant_access_token, app_token, activity_n
     
     return filtered_items
 
+def calculate_volunteer_hours_summary(df):
+    """计算志愿者学时汇总"""
+    # 确保有姓名和学号字段
+    if df.empty or '姓名' not in df.columns or '学号' not in df.columns:
+        return pd.DataFrame()
+    
+    # 处理学时字段 - 转换为数值类型，无法转换的设为0
+    df['学时数值'] = pd.to_numeric(df['志愿学时'], errors='coerce').fillna(0)
+    
+    # 按姓名和学号分组，汇总学时和活动
+    volunteer_summary = df.groupby(['姓名', '学号']).agg({
+        '学时数值': 'sum',
+        '活动名称': lambda x: ', '.join(sorted(set(x)))  # 去重并排序活动名称
+    }).reset_index()
+    
+    # 重命名列
+    volunteer_summary.columns = ['姓名', '学号', '总学时', '参加的活动']
+    
+    # 按总学时降序排序
+    volunteer_summary = volunteer_summary.sort_values('总学时', ascending=False)
+    
+    return volunteer_summary
+
 # Streamlit界面
 st.set_page_config(page_title="社团活动记录查询系统（组织者版）", layout="wide")
 st.title("🎯 社团活动记录查询系统（组织者版）")
@@ -357,29 +384,60 @@ if st.session_state.activity_records is not None:
         }).rename(columns={"姓名": "参与人次", "志愿学时": "总学时"})
         st.dataframe(activity_stats)
         
-        # 导出功能
-        st.subheader("导出数据")
-        col1, col2 = st.columns(2)
+        # 新增：志愿者学时汇总
+        st.subheader("志愿者学时汇总")
+        volunteer_summary = calculate_volunteer_hours_summary(df)
         
-        with col1:
-            if st.button("导出所有记录"):
-                csv = df.to_csv(index=False, encoding='utf-8-sig')
-                st.download_button(
-                    label="下载CSV文件",
-                    data=csv,
-                    file_name=f"活动记录_{start_date}_{end_date}.csv",
-                    mime="text/csv"
-                )
-        
-        with col2:
-            if st.button("导出统计信息"):
-                csv = activity_stats.to_csv(encoding='utf-8-sig')
-                st.download_button(
-                    label="下载统计CSV",
-                    data=csv,
-                    file_name=f"活动统计_{start_date}_{end_date}.csv",
-                    mime="text/csv"
-                )
+        if not volunteer_summary.empty:
+            # 显示汇总表格
+            st.dataframe(volunteer_summary)
+            
+            # 显示统计信息
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("志愿者人数", len(volunteer_summary))
+            with col2:
+                st.metric("总学时数", int(volunteer_summary['总学时'].sum()))
+            with col3:
+                max_hours = volunteer_summary['总学时'].max()
+                top_volunteer = volunteer_summary[volunteer_summary['总学时'] == max_hours]['姓名'].iloc[0]
+                st.metric("最高学时", f"{int(max_hours)} ({top_volunteer})")
+            
+            # 导出功能
+            st.subheader("导出数据")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("导出所有记录"):
+                    csv = df.to_csv(index=False, encoding='utf-8-sig')
+                    st.download_button(
+                        label="下载CSV文件",
+                        data=csv,
+                        file_name=f"活动记录_{start_date}_{end_date}.csv",
+                        mime="text/csv"
+                    )
+            
+            with col2:
+                if st.button("导出统计信息"):
+                    csv = activity_stats.to_csv(encoding='utf-8-sig')
+                    st.download_button(
+                        label="下载统计CSV",
+                        data=csv,
+                        file_name=f"活动统计_{start_date}_{end_date}.csv",
+                        mime="text/csv"
+                    )
+            
+            with col3:
+                if st.button("导出学时汇总"):
+                    csv = volunteer_summary.to_csv(index=False, encoding='utf-8-sig')
+                    st.download_button(
+                        label="下载汇总CSV",
+                        data=csv,
+                        file_name=f"学时汇总_{start_date}_{end_date}.csv",
+                        mime="text/csv"
+                    )
+        else:
+            st.info("无法生成志愿者学时汇总，可能缺少必要字段")
     else:
         st.info("在选定时间段内未找到活动记录")
 
@@ -390,6 +448,7 @@ st.sidebar.info("""
 2. 可选择特定活动或查询所有活动
 3. 点击"查询活动记录"按钮获取数据
 4. 查看结果并可以导出为CSV文件
+5. 新增功能：查看志愿者学时汇总，按学时降序排序
 
 **注意**：系统会查询所有选定活动的反馈记录，可能需要一些时间。
 """)
@@ -404,6 +463,4 @@ st.sidebar.warning("""
 # 添加重置按钮
 if st.sidebar.button("重置查询"):
     st.session_state.activity_records = None
-
     st.experimental_rerun()
-
