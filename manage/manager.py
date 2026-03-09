@@ -14,14 +14,14 @@ EXCLUDED_FIELDS = [
 
 # 活动到反馈表的映射
 ACTIVITY_FEEDBACK_MAP = {
-    '2025一分钟支教':'tblYHLxy60wnJ8HA',
     '9月20日同心圆游园会':'tblKZ7dWs35qQAdk',
-    "2025蒲公英支教":"tblSAg9XFeDDCemv",
-    "2025儿童之家":"tbleo0cd0JCWqjao",
-    "2025同心活动":"tblaiSue8q3UL0Xk",
-    "2025心障关怀":"tblf1SgpfSqkuJaY",
-    "2025乡镇学堂":"tbl5X2BndS1SE0gj",
-    "2025海豚乐乐":"tbl25fXAzpa1vktZ",
+    "2025秋蒲公英支教":"tblSAg9XFeDDCemv",
+    "2025秋心障关怀":"tblf1SgpfSqkuJaY",
+    "2025秋儿童之家":"tbleo0cd0JCWqjao",
+    '2025秋山育未来':'tbl4WrHDZg4KoU4Z',
+    '2025秋一分钟支教':'tblYHLxy60wnJ8HA',
+    "2025秋同心活动":"tblaiSue8q3UL0Xk",
+    "2025秋乡镇学堂":"tbl5X2BndS1SE0gj",
 
     "2025秋金盲杖":"tblB74WxX7708aKd",
     '9.09手工x海淀团委':'tblV3D5hQtH2u7y9',
@@ -29,7 +29,6 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋温馨家园":"tblHyvs5bWUwKgEd",
     "2025秋无障碍素拓":"tblRTFLHDADtOlax",
     "2025秋体面劳动协力营":"tblwOmSFeQNiNkXn",
-    "2025秋教英语":"tbloJuVXxu7Mk9We",
     "2025秋图书校对":"tblbJgXM8ez2hIQK",
     "2025秋守望星空":"tblQrJ0NajzSvd2O",
     "2025秋无障碍茶会":"tblFnwoiVE4C0QJ1",
@@ -43,6 +42,7 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋智能手机教学":"tblJa0JBjkEYvXYO",
     "2025秋入户陪伴活动":"tblQgWfWcJ1tWwoz",
 
+    '2025秋友伴我行第二次通信':'tblgvrwqZK46JQ4K',
     '2025暑王搏计划走访':'tblG5s8CyTQFd1Oe',
     "2025暑苹果北大行":"tblgCIUX1f3Masm5",
     "2025暑资助部电访":"tblmBaPRWLMMDWgT",
@@ -54,7 +54,7 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋友伴我行第一次通信":"tblJvmjm9TEue6Eo",
     '2025秋资助部影展策划':'tbli1bx3nSLbW1uX',
     "2025秋资助部影展出摊":"tblahzMSbBM5MXGU",
-    "2025秋河北计划讲座":"tblu55MQza5nG4s9",
+    "2025寒假资助部电访":"tblu55MQza5nG4s9",
 
     '2025秋扫雪':'tblzVoQoJQUAbjLi',
     '2025秋爱心驿站系列栏目制作':'tblzVoQoJQUAbjLi',
@@ -83,12 +83,13 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025秋初相见手语班":"tbldAv2wNn3VMet8",
     '2025秋静园歌会':'tblHQWjhISfAtBUS',
     "2025秋百团快闪":"tblsVkYmBLyQcGFT",
+    '2025秋联合大学公益课堂':'tblo1BxVU8Xbso5I',
+    '2025秋手语分社期末考核':'tbl5zu7rfaRttSfw',
+    '2025秋观影手语角':'tbl5HYfaYeqDu0bW',
 
     "2025秋第二十九届万里行茶话会":"tblhMI9ExnSS0PW8",
-    "2025秋万里行茶话会":"tblLTQBetLiw0ecx",
     "2025秋项目组面试":"tblaRILhQasCbOCE",
     "2025秋万里行纪念品制作":"tblOPr3RxhG5DTJ0",
-    "2025秋项目组修史":"tblxdgjpH3clJXnj",
     "2025万里行学校征集":"tblacJmKsE51nXQK",
     "2025万里行学校考察":"tblq44HLbcAMZV2w",
 
@@ -526,5 +527,6 @@ st.sidebar.warning("""
 if st.sidebar.button("重置查询"):
     st.session_state.activity_records = None
     st.experimental_rerun()
+
 
 
