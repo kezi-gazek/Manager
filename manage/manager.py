@@ -19,7 +19,7 @@ ACTIVITY_FEEDBACK_MAP = {
     "2025蒲公英支教":"tblSAg9XFeDDCemv",
     "2025儿童之家":"tbleo0cd0JCWqjao",
     "2025同心活动":"tblaiSue8q3UL0Xk",
-    "2025心障关怀":"tbl0vRlv9k1C21ad",
+    "2025心障关怀":"tblf1SgpfSqkuJaY",
     "2025乡镇学堂":"tbl5X2BndS1SE0gj",
     "2025海豚乐乐":"tbl25fXAzpa1vktZ",
 
@@ -526,4 +526,5 @@ st.sidebar.warning("""
 if st.sidebar.button("重置查询"):
     st.session_state.activity_records = None
     st.experimental_rerun()
+
 
